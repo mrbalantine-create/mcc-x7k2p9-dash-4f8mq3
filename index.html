@@ -886,6 +886,11 @@ function togglePrivacy() {
     if (privacyMode) { dtEl.dataset.real = dtEl.textContent; dtEl.textContent = '••••••• USD'; }
     else { if (dtEl.dataset.real) dtEl.textContent = dtEl.dataset.real; }
   }
+  const ptEl = document.getElementById('portfolioTotal');
+  if (ptEl) {
+    if (privacyMode) { ptEl.dataset.real = ptEl.textContent; ptEl.textContent = '••••••• USD'; }
+    else { if (ptEl.dataset.real) ptEl.textContent = ptEl.dataset.real; }
+  }
   // Asset values + quantities
   const _hv_usdc = document.getElementById('hv-usdc');
   if (_hv_usdc) {
