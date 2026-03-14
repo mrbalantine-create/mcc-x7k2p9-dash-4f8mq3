@@ -793,6 +793,7 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
           <div class="holding-val" id="hv-xrp">—</div>
         </div>
       </div>
+      <button onclick="saveHoldingsManual()" style="margin-top:8px;width:100%;background:rgba(0,204,255,.1);border:1px solid var(--cyan);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:8px;border-radius:3px;cursor:pointer;letter-spacing:.1em">💾 SAVE HOLDINGS</button>
 
       <!-- VIEW MODE (ohne Token) -->
       <div id="holdingsView" style="display:none">
@@ -811,6 +812,7 @@ applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
           <div class="hv-row"><span class="hv-asset" style="color:#00aae4">XRP</span><span class="hv-qty" id="vq-xrp">—</span><span class="hv-usd" id="vu-xrp">—</span></div>
         </div>
       </div>
+      <button data-action="saveHoldings" style="margin-top:8px;width:100%;background:rgba(0,204,255,.1);border:1px solid var(--cyan);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.65rem;padding:10px;border-radius:3px;cursor:pointer;letter-spacing:.1em">💾 SAVE HOLDINGS</button>
       <div class="portfolio-total">
         <span style="color:var(--silver);font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;font-family:'Share Tech Mono',monospace">Total Value</span>
         <span class="total-val" id="portfolioTotal">— USD</span>
@@ -1465,6 +1467,16 @@ function applyPortfolioMode() {
   document.getElementById('holdingsView').style.display = isOwner ? 'none'  : 'block';
 }
 
+async function saveHoldingsManual() {
+  if (!SERVER_URL || !DASH_TOKEN) { alert('Please connect with URL and Token first'); return; }
+  await saveHoldingsToServer();
+  const ASSETS = ['usdc','btc','eth','sol','gold','bnb','doge','ada','hype','link','sui','xrp'];
+  const cached = {};
+  ASSETS.forEach(k => { cached[k] = parseFloat(document.getElementById('h-'+k)?.value) || 0; });
+  localStorage.setItem('mcc_holdings_p1', JSON.stringify(cached));
+  alert('Holdings saved! ✓');
+}
+
 async function saveHoldingsToServer() {
   if (!SERVER_URL || !DASH_TOKEN) return;
   const h = {};
@@ -1486,14 +1498,29 @@ async function loadHoldingsFromServer() {
     const res = await fetch(PUBLIC_SERVER_URL + '/holdings', { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return;
     const h = await res.json();
-    ['btc','eth','sol','gold','usdc','bnb','doge','ada','hype','link','sui','xrp'].forEach(k => {
-      if (h[k] !== undefined && h[k] > 0) {
-        const el = document.getElementById('h-'+k);
-        if (el) el.value = h[k];
+    const hasData = Object.values(h).some(v => v > 0);
+    if (hasData) {
+      ['btc','eth','sol','gold','usdc','bnb','doge','ada','hype','link','sui','xrp'].forEach(k => {
+        if (h[k] !== undefined && h[k] > 0) { const el = document.getElementById('h-'+k); if (el) el.value = h[k]; }
+      });
+    } else {
+      const cached = JSON.parse(localStorage.getItem('mcc_holdings_p1') || 'null');
+      if (cached) {
+        ['btc','eth','sol','gold','usdc','bnb','doge','ada','hype','link','sui','xrp'].forEach(k => {
+          if (cached[k] > 0) { const el = document.getElementById('h-'+k); if (el) el.value = cached[k]; }
+        });
       }
-    });
+    }
     calcPortfolio();
-  } catch(e) { /* silent */ }
+  } catch(e) {
+    const cached = JSON.parse(localStorage.getItem('mcc_holdings_p1') || 'null');
+    if (cached) {
+      ['btc','eth','sol','gold','usdc','bnb','doge','ada','hype','link','sui','xrp'].forEach(k => {
+        if (cached[k] > 0) { const el = document.getElementById('h-'+k); if (el) el.value = cached[k]; }
+      });
+      calcPortfolio();
+    }
+  }
 }
 
 function calcPortfolio() {
